@@ -1,0 +1,105 @@
+#!/usr/bin/python
+
+import argparse
+import os, glob, sys
+import json
+
+import param_scan
+import param_scan.parameter_sets as ps
+import param_scan.simulation_run as si
+import param_scan.submitters as su
+import param_scan.io as io
+import param_scan.dict_comparison as dc
+from param_scan.custom_json import json_hook
+
+default_params_name = "parameters"
+data_dir_name = "data"
+last_run_symlink_name = "last.run"
+
+parser = argparse.ArgumentParser(description='bla')
+parser.add_argument('sim', metavar='sim', type=str, help='.sim file describing the simulation')
+parser.add_argument('prms', metavar='prms', type=str, nargs="*", help="key=value pairs for overriding default parameters or ~key for deleting keys", default=[])
+parser.add_argument('-r', '--revision', dest='rev', type=str, help='git revision', default="HEAD")
+parser.add_argument('-j', '--json-prms', dest='json_prms', type=str, default="{}", help='json string of (additional) parameter overrides')
+parser.add_argument('-d', '--data-dir', dest='data_dir', type=str, default=data_dir_name)
+parser.add_argument('-b', '--base-on', dest='base_on', type=str, help='base on params in given .run or parameters file', default=None)
+#parser.add_argument('-s', '--submitter', dest='submitter', type=str, help='submitter ("condor" or "xargs")', default="condor")
+parser.add_argument('-s', '--submitter', dest='submitter', type=str, help='submitter ("condor" or "xargs")', default="xargs")
+
+
+parser.add_argument('--dry-run', action='store_true', dest='dry_run', default=False)
+parser.add_argument('--no-wait', action='store_false', dest='wait', default=True)
+
+args = parser.parse_args()
+
+sim_path = os.path.realpath(io.find_in_parents(args.sim))
+rev = args.rev
+print "Using simulation \n\t%s\nrevision\n\t%s" % (sim_path, rev)
+
+if os.path.exists(args.data_dir) and os.path.isdir(args.data_dir):
+    data_dir = args.data_dir
+else:
+    try:
+        data_dir = os.path.realpath(io.find_in_parents(args.data_dir))
+    except IOError:
+        raise IOError("data dir '%s' not found up to file system boundary" % args.data_dir)
+print "Using data dir\n\t%s" % data_dir
+
+prms = {}
+if args.base_on is None:
+    prmspaths = io.find_all_in_parents(default_params_name)
+    if len(prmspaths) > 0:
+        relprmspaths = [os.path.relpath(p, os.getcwd()) for p in prmspaths]
+        print "Basing on parameters\n\t%s" % " --> ".join(relprmspaths)
+        prms = io.load_parameters_incrementally(prmspaths[0])
+else:
+    fn, x = io.load_run(args.base_on) 
+    print "Basing parameters on \n\t%s" % fn
+    if x.has_key("parameters"):
+        prms = x["parameters"]
+    else:
+        prms = x
+
+oprms = {}
+delkeys = []
+for p in args.prms:
+    if p.startswith("~"):
+        delkeys.append(p[1:])
+    else:
+        try:
+            k, v = p.split("=")
+            oprms[k.strip()] = param_scan.ureg.parse_expression(v)
+        except ValueError: # too many/few values to unpack
+            raise ValueError("parameter overrides need to be given in [key]=[value] pairs (I'm confused by '%s')" % p)
+for k in delkeys:
+    del prms[k]
+if len(delkeys) > 0:
+    print "deleting parameters\n\t%s" % ", ".join(delkeys)
+
+oprms.update(json.loads(args.json_prms, object_hook=io.json_hook))
+if len(oprms.keys()) > 0:
+    print "adding/overriding parameters\n\t%s" % ", ".join(oprms.keys())
+prms.update(oprms)
+
+cwd = os.getcwd()
+try:
+    os.chdir(os.path.dirname(sim_path))
+    if args.submitter == "condor":
+        submitter = su.condor_submitter
+    elif args.submitter == "xargs":
+        submitter = su.xargs_submitter
+    else:
+        raise ValueError("submitter unknown: '%s'" % args.submitter)
+    r = si.submit(io.load(sim_path), prms, data_dir, rev=rev, submitter=submitter, dry_run=args.dry_run, unique=False, submitter_args={"wait": args.wait})
+    os.chdir(cwd)
+    prfx = si.get_prefix(r["sim"], r["parameters"], r["uniqueness"], ignore_underscore=False)
+    io.save(r, prfx + ".run")
+    if os.path.exists(last_run_symlink_name):
+        os.remove(last_run_symlink_name)
+    os.symlink(prfx + ".run", last_run_symlink_name)
+    print "---> %s" % (prfx + ".run")
+finally:
+    os.chdir(cwd)
+
+
+

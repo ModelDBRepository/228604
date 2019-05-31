@@ -1,0 +1,13 @@
+{
+    "model": "eif",
+    "vr": 0.0,
+    "vt": "eval_after_unroll(vtb + d * 100)",
+    "mu": -0.1,
+    "a_e": 0.2,
+    "rin_e": 2.4,
+    "vtb": 1.0,
+    "d": [0.2],
+    "vhist_l": -1.0,
+    "vhist_r": 3.0,
+    "vhist_N": 200
+}

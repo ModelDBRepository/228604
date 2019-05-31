@@ -1,0 +1,5 @@
+namespace git 
+{
+    const extern char commit_hash[] = "@GIT_SHA1@";
+    const extern char source_dir[] = "@CMAKE_CURRENT_SOURCE_DIR@";
+}

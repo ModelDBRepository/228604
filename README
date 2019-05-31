@@ -1,0 +1,99 @@
+--------------------------------------------------------------------------------
+This archive contains source code for the paper
+"Exact analytical results for integrate-and-fire neurons driven
+by excitatory shot noise" by Felix Droste and Benjamin Lindner
+--------------------------------------------------------------------------------
+
+General requirements:
+---------------------
+While the core of the code implementing analytics and simulation is not
+platform specific, most of the glue-scripts tying it all together basically
+assume a Unix-like system. It should work fine on any reasonably modern Linux 
+distribution.
+
+There are basically two things you can do here
+----------------------------------------------
+    
+    1. Play around with the analytics for shot noise driven IF neurons and use 
+       their (Python) implementation
+    2. Completely reproduce all the figures shown in the paper
+
+The first option should be rather quick to get up and running, the second has a 
+few more dependencies and running the simulations can take some time
+
+1. Play around with the (Python) implementation of the analytics
+----------------------------------------------------------------
+
+ Requirements:
+  - Python
+  - scipy (tested with 0.18.1; with 0.14.0, the code for the EIF does not work 
+           due to a bug with numerical integration)
+  - numpy (tested with 1.11.3)
+  - mpmath (tested with 0.19)
+
+ To get started, there is a jupyter notebook with some examples (to get jupyter,
+ as well as the requirements above, installing Anaconda 
+ (https://www.continuum.io/downloads) is probably the easiest way. Run it as
+  
+    jupyter notebook shotnoise_examples.ipynb
+ 
+ There are two small C libraries used to speed up parts of the Python code. For 
+ how to compile them, see 
+
+    analytics/specfunc/specfunc.c
+    analytics/shot_noise_driven/eif_phi/eif_phi.c
+
+ These only concern parts, you can run the jupyter notebook without compiling
+ them and it should guide you accordingly.
+
+2. Completely reproduce all the figures shown in the paper
+----------------------------------------------------------
+
+  There are more requirements here and many more scripts, although most of them
+  are just glue to deal with managing parameter sets and identifying which
+  version of which simulation was used to create which data
+
+  Requirements:
+   - Python
+   - a C++ compiler
+   - scipy (tested with 0.18.1; with 0.14.0, the code for the EIF does not work 
+             due to a bug with numerical integration)
+   - numpy (tested with 1.11.3)
+   - mpmath (tested with 0.19)
+   - xmgrace (although it should be straightforward to port the scripts to 
+              something like matplotlib)
+   - CMake
+   - git
+   - fftw3
+   - gsl (the gnu scientific library)
+   - boost_program_options
+
+  1. Compile the helper libraries for the python (see above)
+  2. Run the simulations: Run
+  
+        bash run_simulations.sh
+   
+     This should take care of compiling and running the simulations.
+     Note that on my laptop, this takes somewhat under half an hour (the lion
+     share of which is burned on the simulations for the susceptibility)
+
+     Note that to run e.g. the susceptibility calculations with better
+     statistics or more data points, it makes sense to run them on a cluster.
+     If you happen to have a HTCondor cluster available, you may want to change 
+     "run_simulations.sh" so that it calls the "run_simulation" script with the 
+     parameter "-s condor" and modify "param_scan/submitters.py" for your setup.
+  3. Generate plots: Run
+
+        bash generate_plots.sh
+
+     This may also take a couple of minutes. In the end, each node in the 
+     directory hirarchy under "plots/" should contain one "plot.pdf" that
+     corresponds to a figure in the paper
+
+  Note that the grace-plotting functionality is based on a modified version of 
+  pygrace by Michael McKerns
+
+  If you are interested in how any of the behind-the-scenes stuff works, please 
+  email me
+
+  12. 4. 2017, Felix Droste - fedro@posteo.net

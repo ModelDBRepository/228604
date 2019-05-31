@@ -1,0 +1,7 @@
+{
+    "f_c": 200.0,
+    "f_max": 200.0,
+    "f_sig": "eval_before_unroll(logspace(-1,2,30))",
+    "dt": 0.001,
+    "seed": "eval_after_unroll(int(f_sig * 10000))"
+}

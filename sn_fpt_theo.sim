@@ -1,0 +1,11 @@
+{
+ "src_path": "simulation",
+ "build_path": "simulation/build/release",
+ "build_command": "cmake -DCMAKE_BUILD_TYPE=Release ../.. && make clean && make",
+ "executable": "sn_fpt_%(GIT_SHA1)s",
+ "_finished_condition": 
+ {
+     "file": "stdout",
+     "contains": "cv = "
+ }
+}

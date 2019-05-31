@@ -1,0 +1,10 @@
+{
+    "model": "eif",
+    "d": [0.01, 0.3, 0.6],
+    "vtb": 1.0,
+    "mu": -0.1,
+    "a_e": 0.1,
+    "dt": 0.001,
+    "vt": "eval_after_unroll(vtb + d * 100)",
+    "rin_e": "eval_before_unroll(linspace(0.1, 10, 30))"
+}

@@ -1,0 +1,6 @@
+{
+    "a_e": "eval_before_unroll(logspace(-2,3,_npoints))",
+    "_npoints": 30,
+    "rin_e": 13.5,
+    "tr": 0.0
+}

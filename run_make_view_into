@@ -1,0 +1,56 @@
+#!/usr/bin/python
+
+import argparse
+import os, glob, sys
+import json
+
+import param_scan.parameter_sets as ps
+import param_scan.simulation_run as si
+from param_scan.io import load_run
+import param_scan.dict_comparison as dc
+from textwrap import TextWrapper
+import shutil
+
+parser = argparse.ArgumentParser(description='bla')
+parser.add_argument('run', metavar='run', type=str,
+                   help='run')
+parser.add_argument('-n', '--name', dest='dir_name', type=str, help='name the view', default=None)
+parser.add_argument('-c', '--constraints', dest='constr', type=str, default="{}",
+                   help='json string of constraints')
+parser.add_argument('--hide', dest='hide', type=str, nargs='+', default=[], help="arguments that should not be shown")
+
+args = parser.parse_args()
+rfn = args.run
+print args.constr
+constr_dict = json.loads(args.constr)
+print args.dir_name
+if args.dir_name is not None:
+    dir_name = args.dir_name
+else:
+    dir_name = rfn + ".view"
+
+rfn, r = load_run(rfn)
+
+psets = ps.unroll(r["parameters"])
+
+if os.path.exists(dir_name):
+    try:
+        shutil.rmtree(dir_name)
+    except OSError:
+        os.remove(dir_name)
+
+if len(psets) > 1:
+    os.makedirs(dir_name)
+
+common_prms = dc.get_common(psets)
+
+for p in psets:
+    if not dc.is_subtree(constr_dict, p):
+        continue
+    d = dc.get_difference_to_common(p, common_prms)
+    link_trgt = r["data_dir"] + "/" + si.get_prefix(r["sim"], p, r["uniqueness"])
+    link_name = " ".join("%s=%s" % (str(k), str(v)) for k, v in d.items() if not k in args.hide)
+    if len(psets) > 1:
+        os.symlink(link_trgt, dir_name + "/" + link_name)
+    else:
+        os.symlink(link_trgt, dir_name)
